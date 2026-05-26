@@ -1,0 +1,281 @@
+---
+title: "Final Project - Datasets"
+subtitle: "ST 437 Data Visualization"
+author: "Andy Nguyen"
+format: html
+date: today
+date-format: long
+execute: 
+  echo: true
+  warning: false
+  message: false
+  eval: true
+---
+
+```{r}
+#| echo: false
+library(tidyverse)
+library(ggplot2)
+library(hoopR) # NBA data
+library(tictoc) # provides timing functions
+```
+
+Load data
+
+```{r}
+#| echo: false
+
+tictoc::tic()
+progressr::with_progress({
+  # data exists beginning from the 2002 season
+  nba_pbp <- hoopR::load_nba_pbp(2002:2026)
+})
+tictoc::toc()
+```
+
+Three Point Trend
+
+```{r}
+three_point_trend <- nba_pbp |>
+  filter(shooting_play == TRUE) |>
+  # exclude free throws
+  filter(!str_detect(text, regex("free throw", ignore_case = TRUE))) |>  
+  group_by(season) |>
+  summarize(
+    shot_attempts        = n(),
+    three_point_attempts = sum(str_detect(text,
+                                          regex("three point", ignore_case = TRUE)),
+                                          na.rm = TRUE),
+    three_point_made     = sum(str_detect(text, 
+                                          regex("makes.*three point", ignore_case = TRUE)),
+                                          na.rm = TRUE)
+  ) |>
+  mutate(
+    three_point_attempt_pct = three_point_attempts / shot_attempts * 100,
+    three_point_pct         = three_point_made / three_point_attempts * 100
+  )
+
+# Save as R Data Structure
+saveRDS(three_point_trend, "three_point_trend.rds")
+```
+
+Three Point Trend by Team
+
+```{r}
+team_three_point_trend <- nba_team_box |>
+  filter(season_type == 2) |>
+  group_by(season, team_display_name) |>
+  summarize(
+    n_games  = n(),
+    avg_3pa  = mean(three_point_field_goals_attempted, na.rm = TRUE),
+    avg_3pct = mean(three_point_field_goal_pct, na.rm = TRUE),
+    win_pct  = mean(team_winner, na.rm = TRUE) * 100,
+    .groups  = "drop"
+  ) |>
+  # Remove All-Star and Exhibtion games & teams apart of it
+  filter(n_games >= 70) |>
+  filter(!str_detect(team_display_name, regex("all-star|world|usa", ignore_case = TRUE)))
+
+# Match teams that relocated
+team_three_point_trend <- team_three_point_trend |>
+  mutate(team_display_name = case_when(
+    team_display_name == "New Jersey Nets"                  ~ "Brooklyn Nets",
+    team_display_name == "New Orleans Hornets"              ~ "New Orleans Pelicans",
+    team_display_name == "New Orleans Pelicans"             ~ "New Orleans Pelicans",
+    team_display_name == "NO/Oklahoma City Hornets"         ~ "New Orleans Pelicans",
+    team_display_name == "NO/Oklahoma City\r\n Hornets"     ~ "New Orleans Pelicans",
+    team_display_name == "Seattle SuperSonics"              ~ "Oklahoma City Thunder",
+    team_display_name == "Charlotte Bobcats"                ~ "Charlotte Hornets",
+    TRUE ~ team_display_name
+  ))
+
+# Save as R Data Structure
+saveRDS(team_three_point_trend, "team_three_point_trend.rds")
+```
+
+Three Point Trend - GRAPH
+
+```{r}
+three_point_trend |>
+  ggplot(aes(x = season, y = three_point_attempt_pct)) +
+  geom_line(color = "#0072B2", linewidth = 1) +
+  geom_point(color = "#0072B2", size = 2) +
+  scale_x_continuous(breaks = seq(2002, 2026, by = 2)) +
+  scale_y_continuous(
+    labels = scales::percent_format(scale = 1),
+    limits = c(0, NA)
+  ) +
+  labs(
+    title   = "The Rise of the Three-Point Shot (2002–2026)",
+    x       = "Season",
+    y       = "3PT Attempt Rate (% of all shots)",
+    caption = "Source: hoopR / ESPN"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title      = element_text(hjust = 0.5, face = "bold"),
+    axis.text.x     = element_text(angle = 45, hjust = 1)
+  )
+```
+
+Wins vs 3-Point Attempts
+
+```{r}
+wins_vs_3pa <- nba_team_box |>
+  filter(season_type == 2) |>
+  group_by(season, team_display_name) |>
+  summarize(
+    n_games  = n(),
+    avg_3pa  = mean(three_point_field_goals_attempted, na.rm = TRUE),
+    win_pct  = mean(team_winner, na.rm = TRUE) * 100,
+    .groups  = "drop"
+  ) |>
+  # Remove All-Star and Exhibition games
+  filter(n_games >= 70) |>  
+  filter(!str_detect(team_display_name, regex("all-star|world|usa", ignore_case = TRUE)))
+
+# Match teams that relocated
+wins_vs_3pa <- wins_vs_3pa |>
+  mutate(team_display_name = case_when(
+    team_display_name == "New Jersey Nets"              ~ "Brooklyn Nets",
+    team_display_name == "New Orleans Hornets"          ~ "New Orleans Pelicans",
+    team_display_name == "New Orleans Pelicans"         ~ "New Orleans Pelicans",
+    team_display_name == "NO/Oklahoma City Hornets"     ~ "New Orleans Pelicans",
+    team_display_name == "NO/Oklahoma City\r\n Hornets" ~ "New Orleans Pelicans",
+    team_display_name == "Seattle SuperSonics"          ~ "Oklahoma City Thunder",
+    team_display_name == "Charlotte Bobcats"            ~ "Charlotte Hornets",
+    TRUE ~ team_display_name
+  ))
+
+# Save as R Data Structure
+saveRDS(wins_vs_3pa, "wins_vs_3pa.rds")
+```
+
+Wins vs 3-Point Attempts - GRAPH
+
+```{r}
+wins_vs_3pa |>
+  ggplot(aes(x = avg_3pa, y = win_pct)) +
+  geom_point(aes(color = season), alpha = 0.6, size = 2) +
+  geom_smooth(method = "lm", color = "black", se = FALSE) +
+  scale_color_viridis_c() +
+  labs(
+    title   = "Do More 3-Point Attempts Lead to More Wins?",
+    x       = "Avg 3-Point Attempts per Game",
+    y       = "Win Percentage (%)",
+    color   = "Season",
+    caption = "Source: hoopR / ESPN"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+```
+
+Shot Breakdown - League Average
+
+```{r}
+shot_breakdown <- nba_pbp |>
+  filter(shooting_play == TRUE) |>
+  filter(!str_detect(text, regex("free throw", ignore_case = TRUE))) |>
+  mutate(shot_type = case_when(
+    str_detect(text, regex("three point", ignore_case = TRUE)) ~ "3-Point",
+    str_detect(type_text, regex("dunk|layup|hook", ignore_case = TRUE)) ~ "At Rim",
+    TRUE ~ "Mid-Range"
+  )) |>
+  mutate(era = case_when(
+    season <= 2009 ~ "2002-2009",
+    season <= 2015 ~ "2010-2015",
+    season <= 2020 ~ "2016-2020",
+    TRUE           ~ "2021-2026"
+  )) |>
+  group_by(era, shot_type) |>
+  summarize(n = n(), .groups = "drop") |>
+  group_by(era) |>
+  mutate(pct = n / sum(n) * 100)
+
+# Save as R Data Structure
+saveRDS(shot_breakdown, "shot_breakdown.rds")
+```
+
+Shot Breakdown by Teams
+
+```{r}
+team_shot_breakdown <- nba_pbp |>
+  filter(shooting_play == TRUE) |>
+  filter(!str_detect(text, regex("free throw", ignore_case = TRUE))) |>
+  left_join(
+    nba_team_box |> select(game_id, team_id, team_display_name) |> distinct(),
+    by = c("game_id", "team_id")
+  ) |>
+  # Classify shots
+  mutate(shot_type = case_when(
+    str_detect(text, 
+               regex("three point", ignore_case = TRUE)
+    ) ~ "3-Point",
+    str_detect(type_text,
+               regex("dunk|layup|hook", ignore_case = TRUE)
+    ) ~ "At Rim", 
+    TRUE ~ "Mid-Range"
+  )) |>
+  # Classify eras
+  mutate(era = case_when(
+    season <= 2009 ~ "2002-2009",
+    season <= 2015 ~ "2010-2015",
+    season <= 2020 ~ "2016-2020",
+    TRUE           ~ "2021-2026"
+  )) |>
+  # Match teams that relocated
+  mutate(team_display_name = case_when(
+    team_display_name == "New Jersey Nets"              ~ "Brooklyn Nets",
+    team_display_name == "New Orleans Hornets"          ~ "New Orleans Pelicans",
+    team_display_name == "NO/Oklahoma City Hornets"     ~ "New Orleans Pelicans",
+    team_display_name == "NO/Oklahoma City\r\n Hornets" ~ "New Orleans Pelicans",
+    team_display_name == "Seattle SuperSonics"          ~ "Oklahoma City Thunder",
+    team_display_name == "Charlotte Bobcats"            ~ "Charlotte Hornets",
+    TRUE ~ team_display_name
+  )) |>
+  group_by(team_display_name, era, shot_type) |>
+  summarize(n = n(), .groups = "drop") |>
+  group_by(team_display_name, era) |>
+  mutate(pct = n / sum(n) * 100)
+
+# Save as R Data Structure
+saveRDS(team_shot_breakdown, "team_shot_breakdown.rds")
+```
+
+Shot Breakdown - GRAPH
+
+```{r}
+shot_breakdown |>
+  mutate(era = factor(era, 
+                      levels = c("2002-2009", 
+                                      "2010-2015", 
+                                      "2016-2020", 
+                                      "2021-2026"
+                                )
+                      ),
+         shot_type = factor(shot_type, 
+                            levels = c("Mid-Range", 
+                                       "At Rim", 
+                                       "3-Point"
+                                      )
+                      )
+  ) |>
+  ggplot(aes(x = era, y = pct, fill = shot_type)) +
+  geom_col(position = "dodge") +
+  scale_fill_manual(values = c(
+                                "3-Point"   = "#0072B2",
+                                "At Rim"    = "#E69F00",
+                                "Mid-Range" = "#999999"
+                              )
+  ) +
+  scale_y_continuous(labels = scales::percent_format(scale = 1)) +
+  labs(
+    title   = "How Shot Selection Has Changed by Era",
+    x       = "Era",
+    y       = "Percentage of Shots",
+    fill    = "Shot Type",
+    caption = "Source: hoopR / ESPN"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+```

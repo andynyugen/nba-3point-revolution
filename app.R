@@ -12,7 +12,15 @@ library(bslib)
 library(hoopR)
 library(tidyverse)
 
-team_choices <- c("None", sort(unique(team_trend$team_display_name)))
+# Load datasets
+three_point_trend       <- readRDS("three_point_trend.rds")
+team_three_point_trend  <- readRDS("team_three_point_trend.rds")
+wins_vs_3pa             <- readRDS("wins_vs_3pa.rds")
+shot_breakdown          <- readRDS("shot_breakdown.rds")
+team_shot_breakdown     <- readRDS("team_shot_breakdown.rds")
+
+# Get list of teams
+team_choices <- c("None", sort(unique(team_three_point_trend$team_display_name)))
 
 # Define UI ----
 ui <- page_sidebar(
@@ -57,7 +65,7 @@ server <- function(input, output) {
     
     # Overlay selected team if not None
     if (input$team != "None") {
-      team_data <- team_trend |>
+      team_data <- team_three_point_trend |>
         filter(team_display_name == input$team,
                season >= input$season_range[1],
                season <= input$season_range[2]) |>
