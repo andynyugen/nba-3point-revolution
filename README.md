@@ -4,7 +4,7 @@
 An interactive R Shiny app exploring the NBA's dramatic shift toward three-point shooting over the past two decades, built for ST 437 Data Visualization at Oregon State University.
 
 ## 🔗 Live App
-[View the app on shinyapps.io](https://yourusername.shinyapps.io/your-app-name)
+[View the app on shinyapps.io](https://andynyugen.shinyapps.io/final-project/)
 
 ## 📖 About
 Over the past two decades, the NBA has systematically abandoned the mid-range jumper in favor of three-point shots and at-rim attempts. This app explores that shift using play-by-play and team box score data from 2002 to 2026, sourced through the `hoopR` R package.
