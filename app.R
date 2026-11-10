@@ -148,25 +148,22 @@ server <- function(input, output) {
     # Overlay trend for selected team if a team is selected
     if (input$team != "N/A") {
       team_data <- team_three_point_trend |>
-        # Filter data by selected season range
         filter(team_display_name == input$team,
                season >= input$season_range[1],
-               season <= input$season_range[2]) |>
-        # normalize team 3PA to same scale as league-wide attempt rate
-        mutate(team_3pa_pct = avg_3pa / max(avg_3pa) * max(three_point_trend$three_point_attempt_pct))
+               season <= input$season_range[2])
       
-      # Add separate trend line and season points for selected team to contrast with league average trend
+      # Team line uses the same metric as the league line, so no rescaling needed
       p <- p +
         geom_line(data = team_data,
-                  aes(x = season, y = team_3pa_pct, color = input$team),
+                  aes(x = season, y = three_pa_rate, color = input$team),
                   linewidth = 1) +
         geom_point(data = team_data,
-                   aes(x     = season, 
-                       y     = team_3pa_pct,
+                   aes(x     = season,
+                       y     = three_pa_rate,
                        color = input$team,
-                       # custom hover toolkit stat box
-                       text  = paste0("Season: ", season,
-                                      "<br>3PT Rate: ", round(avg_3pa, 1), "%")),
+                       text  = paste0(input$team,
+                                      "<br>Season: ", season,
+                                      "<br>3PT Rate: ", round(three_pa_rate, 1), "%")),
                    size = 2)
     }
     

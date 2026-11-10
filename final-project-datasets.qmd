@@ -29,6 +29,7 @@ tictoc::tic()
 progressr::with_progress({
   # data exists beginning from the 2002 season
   nba_pbp <- hoopR::load_nba_pbp(2002:2026)
+  nba_team_box <- hoopR::load_nba_team_box(2002:2026)
 })
 tictoc::toc()
 ```
@@ -70,6 +71,9 @@ team_three_point_trend <- nba_team_box |>
     avg_3pa  = mean(three_point_field_goals_attempted, na.rm = TRUE),
     avg_3pct = mean(three_point_field_goal_pct, na.rm = TRUE),
     win_pct  = mean(team_winner, na.rm = TRUE) * 100,
+    # share of all shots that were threes, same metric as the league line
+    three_pa_rate = sum(three_point_field_goals_attempted, na.rm = TRUE) /
+                    sum(field_goals_attempted, na.rm = TRUE) * 100,
     .groups  = "drop"
   ) |>
   # Remove All-Star and Exhibtion games & teams apart of it

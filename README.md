@@ -31,7 +31,7 @@ Data is sourced through the [`hoopR`](https://hoopr.sportsdataverse.org/) R pack
 ## 🚀 Running Locally
 1. Clone the repository
 ```r
-git clone https://github.com/yourusername/your-repo-name.git
+git clone https://github.com/andynyugen/nba-3point-revolution.git
 ```
 2. Install required packages
 ```r
