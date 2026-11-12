@@ -76,8 +76,9 @@ team_three_point_trend <- nba_team_box |>
                     sum(field_goals_attempted, na.rm = TRUE) * 100,
     .groups  = "drop"
   ) |>
-  # Remove All-Star and Exhibtion games & teams apart of it
-  filter(n_games >= 70) |>
+  # Remove All-Star and Exhibition games & teams apart of it
+  # 60 keeps shortened seasons (2012 lockout, 2020 COVID)
+  filter(n_games >= 60) |>
   filter(!str_detect(team_display_name, regex("all-star|world|usa", ignore_case = TRUE)))
 
 # Match teams that relocated
@@ -135,7 +136,8 @@ wins_vs_3pa <- nba_team_box |>
     .groups  = "drop"
   ) |>
   # Remove All-Star and Exhibition games
-  filter(n_games >= 70) |>  
+  # 60 keeps shortened seasons (2012 lockout, 2020 COVID)
+  filter(n_games >= 60) |>  
   filter(!str_detect(team_display_name, regex("all-star|world|usa", ignore_case = TRUE)))
 
 # Match teams that relocated
